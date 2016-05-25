@@ -428,6 +428,5 @@ int main(int argc, char* argv[])
 	source = "float a; int b; a = (10.44*356+1.28) / 2 + 1024 * 1.6;b = a * 2 ¨C c/2;write(b).";
 	cout << source << endl;
 	program();
-	system("pause");
 	return 0;
 }
