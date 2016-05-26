@@ -33,7 +33,7 @@ int symbol;                                       // token类别
 int int_value;                                    // int型变量的值
 float float_value;                                // float型变量的值
 int line = 1;                                     // 行号
-int postion = 1;                                  // 行内位置
+int position = 1;                                  // 行内位置
 int index = 0;                                    // 当前字符下标
 string current_char;                              // 当前字符
 bool source_end = false;
@@ -52,7 +52,7 @@ void get_next_char()
 	{
 		current_char = source[index];
 		index++;
-		postion++;
+		position++;
 		cout << "get_next_char(): " << current_char << "    symbol: " << symbol_strs[symbol] << endl;
 	} 
 	else 
@@ -67,7 +67,7 @@ void token_parser()
 	if (current_char.c_str()[0] == '\n') 
 	{
 		line++;
-		postion = 1;
+		position = 1;
 		get_next_char();
 		next();
 	}
@@ -79,7 +79,6 @@ void token_parser()
 	// 保留字和标识符的分析
 	else if (isalpha(current_char.c_str()[0])) 
 	{
-		cout << "first step in parser word, current char: " << current_char << endl;
 		string temp_word = current_char;
 		get_next_char();
 		while (isalnum(current_char.c_str()[0])) 
@@ -87,7 +86,7 @@ void token_parser()
 			temp_word += current_char;
 			get_next_char();
 		}
-		cout << "temp word: " << temp_word << endl;
+		
 		if (temp_word == "float")
 		{
 			symbol = Float;
@@ -105,9 +104,7 @@ void token_parser()
 		}
 		else
 		{
-			cout << "before be Id, temp word: " << temp_word << " symbol:"<< symbol_strs[symbol]<<endl;
 			symbol = Id;
-			cout << "after be Id, symbol: " << symbol_strs[symbol] << endl;
 			token_value = temp_word;
 			return;
 		}
@@ -116,14 +113,12 @@ void token_parser()
 	else if (isdigit(current_char.c_str()[0]))
 	{
 		string temp_number = current_char;
-		cout << "print from number parser before get_next_char()" << endl;
 		get_next_char();
 		while (isdigit(current_char.c_str()[0]) || current_char == ".")
 		{
 			temp_number += current_char;
 			get_next_char();
 		}
-		cout << "print from number parser and parser end.symbol: "<<symbol_strs[symbol] << endl;
 		if (temp_number.find(".") != string::npos)
 		{
 			symbol = FloatNum;
@@ -176,7 +171,6 @@ void token_parser()
 	else if (current_char == ")")
 	{
 		symbol = Rparen;
-		cout << "print in token_parser and current_char: " << current_char << " symbol:" << symbol_strs[symbol] << endl;
 		get_next_char();
 		return;
 	}
@@ -195,7 +189,6 @@ void token_parser()
 	else if (current_char == ".")
 	{
 		symbol = Period;
-		exit(0);
 		return;
 	}
 	else
@@ -210,8 +203,7 @@ void match(int expectSymbol)
 {
 	if (symbol != expectSymbol)
 	{
-		//printf("line%d, position %d: unexcepted token!%s, excpet: %s\n", line, postion, symbol_strs[symbol], symbol_strs[expectSymbol]);
-		system("pause");
+		cout << "(error)line" << line << ", position" << position << ", unexpected token \"" << symbol_strs[symbol] << "\"" << endl;
 		exit(1);
 	}
 	else
@@ -237,14 +229,12 @@ void var_declaration()
 	{
 		if (symbol == Float)
 		{
-			cout << "befor match Float in var_declaration(), symbol: " << symbol_strs[symbol] << endl;
 			match(Float);
-			cout << "match Float success, symbol: " << symbol_strs[symbol] << endl;
 			match(Id);
-			cout << "match Id success, symbol: " << symbol_strs[symbol] << endl;
-			if (ids.find(token_value) != ids.end())
+			// 如果在ids中，则提示该变量已经声明
+			if (ids.find(token_value) != ids.end())	
 			{
-				printf("line%d, position%d: variable \"%s\" had been declared!", line, postion, token_value);
+				printf("line%d, position%d: variable \"%s\" had been declared!", line, position, token_value);
 				exit(2);
 			}
 			ids.insert(pair<string, int>(token_value, Float));
@@ -256,7 +246,7 @@ void var_declaration()
 			match(Id);
 			if (ids.find(token_value) != ids.end())
 			{
-				printf("line%d, position%d: variable \"%s\" had been declared!", line, postion, token_value);
+				printf("line%d, position%d: variable \"%s\" had been declared!", line, position, token_value);
 				exit(2);
 			}
 			ids.insert(pair<string, int>(token_value, Int));
@@ -272,7 +262,6 @@ double factor()
 	{
 		match(Lparen);
 		result = expr();
-		cout << "error" << endl;
 		match(Rparen);
 	}
 	else if (symbol == FloatNum)
@@ -301,7 +290,7 @@ double factor()
 		}
 		else
 		{
-			printf("line%d, undefined variable %s", line, token_value);
+			printf("line%d, undefined variable %s.", line, token_value);
 			exit(3);
 		}
 	}
@@ -359,7 +348,7 @@ double expr()
 {
 	double lvalue = term();
 	double result = expr_tail(lvalue);
-	next();
+	//next();
 	return result;
 }
 
@@ -369,7 +358,7 @@ void program()
 	init();
 	next();    // 获取第一个token
 	var_declaration();
-	cout << "var declaration end!" << endl;
+	
 	// 变量赋值
 	do
 	{
@@ -377,12 +366,12 @@ void program()
 		string temp_name = token_value;
 		if (ids.find(token_value) == ids.end())
 		{
-			printf("line%d, undefined variable %s", line, token_value);
+			printf("line%d, undefined variable %s.", line, token_value);
 			exit(3);
 		}
 		match(Assign);
 		double result = expr();
-		auto iter = ids.find(token_value);
+		auto iter = ids.find(temp_name);
 		if (iter->second == Float)
 		{
 			float_vars.insert(pair<string, float>(temp_name, result));
@@ -391,6 +380,7 @@ void program()
 		{
 			int_vars.insert(pair<string, float>(temp_name, result));
 		}
+		match(Semicolon);
 	} while (symbol == Id);
 	
 	
@@ -402,30 +392,32 @@ void program()
 			match(Lparen);
 			if (symbol == Id)
 			{
-				if (ids.find(token_value) != ids.end())
+				// 如果不在ids中，则提示该变量未定义
+				if (ids.find(token_value) == ids.end())
 				{
-					printf("line%d, undefined variable %s", line, token_value);
+					printf("line%d, undefined variable %s.", line, token_value);
 					exit(3);
 				}
 				auto iter = ids.find(token_value);
 				if (iter->second == Float)
 				{
-					cout << float_vars.find(token_value)->second << endl;
+					cout <<token_value<<": "<<float_vars.find(token_value)->second << endl;
 				}
 				else
 				{
-					cout << int_vars.find(token_value)->second << endl;
+					cout << token_value << ": " << int_vars.find(token_value)->second << endl;
 				}
+				next();
 			}
-			next();
 			match(Rparen);
+			next();
 		}
 	} while (symbol != Period);
 }
 
 int main(int argc, char* argv[])
 {
-	source = "float a; int b; a = (10.44*356+1.28) / 2 + 1024 * 1.6;b = a * 2 – c/2;write(b).";
+	source = "float a; int b; a = (10.44*356+1.28) / 2 + 1024 * 1.6;b = a * 2 - a/2;write(b);write(a).";
 	cout << source << endl;
 	program();
 	return 0;
