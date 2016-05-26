@@ -3,6 +3,7 @@
 #include <cctype>
 #include <map>
 #include <vector>
+#include <fstream>
 using namespace std;
 
 /*
@@ -33,13 +34,13 @@ int symbol;                                       // token类别
 int int_value;                                    // int型变量的值
 float float_value;                                // float型变量的值
 int line = 1;                                     // 行号
-int position = 1;                                  // 行内位置
 int index = 0;                                    // 当前字符下标
 string current_char;                              // 当前字符
 bool source_end = false;
 map<string, float> float_vars;
 map<string, int> int_vars;
 map<string, int> ids;
+ofstream out;
 
 void next();
 // 表达式计算
@@ -52,8 +53,6 @@ void get_next_char()
 	{
 		current_char = source[index];
 		index++;
-		position++;
-		cout << "get_next_char(): " << current_char << "    symbol: " << symbol_strs[symbol] << endl;
 	} 
 	else 
 	{
@@ -67,7 +66,6 @@ void token_parser()
 	if (current_char.c_str()[0] == '\n') 
 	{
 		line++;
-		position = 1;
 		get_next_char();
 		next();
 	}
@@ -203,7 +201,7 @@ void match(int expectSymbol)
 {
 	if (symbol != expectSymbol)
 	{
-		cout << "(error)line" << line << ", position" << position << ", unexpected token \"" << symbol_strs[symbol] << "\"" << endl;
+		cout << "(error)line" << line << ", unexpected token \"" << symbol_strs[symbol] << "\"" << endl;
 		exit(1);
 	}
 	else
@@ -234,7 +232,7 @@ void var_declaration()
 			// 如果在ids中，则提示该变量已经声明
 			if (ids.find(token_value) != ids.end())	
 			{
-				printf("line%d, position%d: variable \"%s\" had been declared!", line, position, token_value);
+				cout << "(error)line " << line << ", variable " << token_value << " had been defined." << endl;
 				exit(2);
 			}
 			ids.insert(pair<string, int>(token_value, Float));
@@ -246,7 +244,7 @@ void var_declaration()
 			match(Id);
 			if (ids.find(token_value) != ids.end())
 			{
-				printf("line%d, position%d: variable \"%s\" had been declared!", line, position, token_value);
+				cout << "(error)line " << line << ", variable " << token_value << " had been defined." << endl;
 				exit(2);
 			}
 			ids.insert(pair<string, int>(token_value, Int));
@@ -290,7 +288,7 @@ double factor()
 		}
 		else
 		{
-			printf("line%d, undefined variable %s.", line, token_value);
+			cout << "(error)line " << line << ", undefined variable " << token_value << "." << endl;
 			exit(3);
 		}
 	}
@@ -301,7 +299,6 @@ double term_tail(double lvalue)
 {
 	if (symbol == Mul) 
 	{
-		cout << "print from get term_tail and there symbol should be Mul, symbol: "<<symbol_strs[symbol] << endl;
 		match(Mul);
 		double value = lvalue * factor();
 		return term_tail(value);
@@ -348,7 +345,6 @@ double expr()
 {
 	double lvalue = term();
 	double result = expr_tail(lvalue);
-	//next();
 	return result;
 }
 
@@ -366,7 +362,7 @@ void program()
 		string temp_name = token_value;
 		if (ids.find(token_value) == ids.end())
 		{
-			printf("line%d, undefined variable %s.", line, token_value);
+			cout << "(error)line " << line << ", undefined variable " << token_value << "." << endl;
 			exit(3);
 		}
 		match(Assign);
@@ -395,17 +391,19 @@ void program()
 				// 如果不在ids中，则提示该变量未定义
 				if (ids.find(token_value) == ids.end())
 				{
-					printf("line%d, undefined variable %s.", line, token_value);
+					cout << "(error)line " << line << ", undefined variable " << token_value << "." << endl;
 					exit(3);
 				}
 				auto iter = ids.find(token_value);
 				if (iter->second == Float)
 				{
 					cout <<token_value<<": "<<float_vars.find(token_value)->second << endl;
+					out << token_value << ": " << float_vars.find(token_value)->second << endl;
 				}
 				else
 				{
-					cout << token_value << ": " << int_vars.find(token_value)->second << endl;
+					cout << token_value << ": " << (int) int_vars.find(token_value)->second << endl;
+					out << token_value << ": " << (int)int_vars.find(token_value)->second << endl;
 				}
 				next();
 			}
@@ -417,8 +415,36 @@ void program()
 
 int main(int argc, char* argv[])
 {
-	source = "float a; int b; a = (10.44*356+1.28) / 2 + 1024 * 1.6;b = a * 2 - a/2;write(b);write(a).";
-	cout << source << endl;
+	if (argc != 3)
+	{
+		cout << "3 arguments needed." << endl;
+		exit(4);
+	}
+	
+	ifstream in(argv[1]);
+	char buffer[256];
+	if (!in.is_open())
+	{
+		cout << "file " << argv[1] << " not exist.";
+		exit(5);
+	}
+	while (!in.eof())
+	{
+		in.getline(buffer, 100);
+		source += buffer;
+		source += '\n';
+	}
+	
+	source = source.substr(0, source.size() - 2);
+	if (source[source.size() - 1] != '.')
+	{
+		cout << "the end of the source should be \".\"" << endl;
+		exit(6);
+	}
+	
+	out = ofstream(argv[2]);
 	program();
+	cout << "write to " << argv[2] << " success." << endl;
+	out.close();
 	return 0;
 }
